@@ -1,0 +1,75 @@
+panorama:
+# 图上只标简短的阶段标签
+- time: 2026-05-28 12:00
+  text: 'P1 横盘吸筹'
+  kind: logic
+- time: 2026-05-31 05:00
+  text: 'P2 拉盘引爆'
+  kind: news
+- time: 2026-05-31 08:00
+  text: 'P3 尖顶回落'
+  kind: logic
+- time: 2026-05-31 14:00
+  text: 'P4 1h结算'
+  kind: logic
+- time: 2026-06-02 00:00
+  text: 'P5 慢熊放血'
+  kind: news
+- time: 2026-06-11 00:00
+  text: 'P6 死猫反弹'
+  kind: logic
+
+zoom:
+- time: 2026-05-31 05:00
+  text: '拉盘开始'
+  kind: news
+- time: 2026-05-31 08:00
+  text: '费率-2%封顶'
+  kind: news
+
+strategy:
+- time: 2026-05-31 06:00
+  price: 0.078
+  side: long_out
+  label: X1 拉盘顶离场
+  score_live: 8.0
+  score_actual: 9.5
+- time: 2026-05-31 14:00
+  price: 0.065
+  side: long_out
+  label: X2 中继离场
+  score_live: 6.0
+  score_actual: 7.5
+- time: 2026-05-31 09:00
+  price: 0.065
+  side: long_in
+  label: E1 接飞刀(反例)
+  score_live: 3.0
+  score_actual: 1.0
+
+# 阶段详解表（图下方独立表格, 不标在图上）
+phases:
+- label: P1 横盘吸筹
+  period: '~5/25→5/31 凌晨'
+  narrative: >
+    价格窄幅震荡,持仓量缓慢萎缩→散户离场。但大户多空比持续攀升,聪明钱在暗中建仓。
+- label: P2 拉盘引爆
+  period: '5/31 00:00→06:00'
+  narrative: >
+    价格火箭拉升,持仓量瞬间翻倍(散户FOMO追多+空头被迫加仓),双向踩踏,费率砸到-2%封顶。
+- label: P3 尖顶回落
+  period: '5/31 06:00→09:00'
+  narrative: >
+    拉盘资金撤出,追高者套在山顶。但持仓量仍畸高——巨量仓位被锁,多空双方谁都跑不掉。
+- label: P4 1h结算
+  period: '5/31 09:00→23:00 (15次全负)'
+  narrative: >
+    币安调为1h结算加速再平衡。价格暂稳但持仓量居高不下,负费率持续→空头在补贴多头。暴风雨前的平静。
+- label: P5 慢熊放血
+  period: '6/1→6/9'
+  narrative: >
+    价格阴跌近三成,持仓量持续萎缩→多头被迫止损。大户多空比从1.3翻为0.5→聪明钱全面翻空。A类典型结局:接飞刀者被慢慢放血。
+- label: P6 死猫反弹
+  period: '6/10→6/14'
+  narrative: >
+    短暂反弹无持续性,持仓量回到拉盘前水平,多空比虽在恢复但信心已崩。全程OI呈拱形=经典pump&dump。

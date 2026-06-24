@@ -1,0 +1,22 @@
+panorama:
+- time: 2026-05-28 09:00
+  text: '新上市投机延续
+
+    多地上币(币安/Coinbase
+
+    /Upbit/Bithumb)'
+  kind: news
+- time: 2026-05-29 12:00
+  text: '拥挤做空→负费率
+
+    切1h结算'
+  kind: logic
+- time: 2026-06-08 00:00
+  text: '退出后14天 +3.7%
+
+    费率自然回归,中性偏机会'
+  kind: logic
+zoom:
+- time: 2026-05-29 00:00
+  text: 区间内最负 -0.28%
+  kind: news

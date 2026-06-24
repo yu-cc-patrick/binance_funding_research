@@ -1,0 +1,8 @@
+label: C 类 · 股票永续休市
+body: AAPLUSDT 是币安的**苹果股票永续**(-USDⓈ-M tokenized stock perp，2026-04-06 首批上线)。合约 24/7
+  交易，但标的美股休市时指数被钉在最后收盘价附近、缺乏实时锚定。本事件（**5-10 周日 → 5-11 周一**）横跨周末，正是指数冻结最久、折价最易放大的窗口：交易者预期周一开盘跳空、提前在永续端卖出，把永续压到指数下方形成**折价
+  → 负费率**（空付多，最负 -0.09%），费率触阈值后切 1h 结算加速收敛。（推断：跨周末休市跳空为主因。）
+sources:
+- https://www.binance.info/en/support/announcement/detail/4cde981dc32d4268b7645e9d16e8d63a
+- https://developers.binance.com/docs/derivatives/usds-margined-futures/market-data/rest-api/Trading-Schedule
+verdict: ✓ 较好

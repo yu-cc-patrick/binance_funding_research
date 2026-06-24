@@ -1,0 +1,11 @@
+label: A 类 · 暴涨逼空
+body: ORCA 是 **Orca**（Solana 上的主流 DEX/AMM）的代币。其 1h 区间从 2026-05-01 00:00 就开始（数据窗口起点），说明
+  1h 周期早在 4 月底已启动：ORCA 在 **2026-04-26 前后单日波动达 91.4%**，多家来源归因于**监管/利好消息引爆的逼空** + Solana
+  DEX 成交量激增，价格一度冲到约 $2.10，并在韩国市场出现过热迹象；5 月初仍维持高位放量（5/1 单日 +28%、成交额 $187M 超过市值）。剧烈逼空中永续被拥挤做空压制、贴水现货形成负费率（最负
+  -0.17%），币安切 1h 结算加速收敛，这一状态延续到 5/6。（推断：主因是逼空 + 成交量驱动的过热行情，非解锁或利空。）
+sources:
+- https://www.bitgetapp.com/news/detail/12560605385448
+- https://www.bitrue.com/blog/orca-crypto-price-surge-solana-dex-analysis
+- https://yellow.com/news/orca-28-percent-volume-tops-market-cap
+- https://www.coinglass.com/FundingRate/ORCA
+verdict: △ 震荡

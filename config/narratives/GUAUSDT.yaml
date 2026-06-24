@@ -1,0 +1,10 @@
+label: B 类 · 暴雷砸盘
+body: GUA 是 **SuperFortune**（Manta 孵化、主打东方玄学/求签问卜叙事的 Web3 项目，2025-11 经币安 Alpha 上线）的代币。2026-05-27
+  项目遭**私钥泄露**：签名者私钥失守致多签地址被篡改，约 **1498 万枚 GUA** 从解锁合约被转出后在链上几乎瞬间抛售，币价 24 小时内**暴跌约
+  76%**（约 1.6 → 0.3 USDT）。海量现货抛压叠加永续恐慌做空，把资金费率砸至 **-2% 封顶**。币安、KuCoin 于 5/27、5/30
+  发布 GUAUSDT 费率周期调整公告，临时改为 1h 结算加速再平衡。未见永久下架信息。
+sources:
+- https://www.cryptotimes.io/2026/05/29/manta-incubated-superfortune-hit-by-15m-multisig-exploit-gua-token-plunges/
+- https://www.gate.com/zh-tw/news/detail/superfortune-confirms-attack-caused-by-private-key-leakage-not-address-21469792
+- https://www.kucoin.com/announcement/en-changes-to-funding-rate-intervals-for-guausdt-perpetual-contracts-05-27
+verdict: ✗ 接飞刀

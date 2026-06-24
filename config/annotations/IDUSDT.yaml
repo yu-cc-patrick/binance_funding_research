@@ -1,0 +1,20 @@
+panorama:
+- time: 2026-05-29 17:00
+  text: 'SPACE ID 单日暴涨~44%
+
+    (Upbit成交激增)'
+  kind: news
+- time: 2026-05-30 12:00
+  text: '逐顶做空→负费率
+
+    切1h结算'
+  kind: logic
+- time: 2026-06-08 00:00
+  text: '退出后14天 -26.3%
+
+    暴涨后回归向下'
+  kind: logic
+zoom:
+- time: 2026-05-30 00:00
+  text: 区间内最负 -0.51%
+  kind: news

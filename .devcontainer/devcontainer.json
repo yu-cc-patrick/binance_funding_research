@@ -1,0 +1,25 @@
+{
+  "name": "funding-research",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+
+  "capAdd": ["NET_ADMIN", "NET_RAW"],
+
+  "workspaceFolder": "/workspace",
+
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  },
+
+  // 容器里跑 claude --dangerously-skip-permissions 开 YOLO。
+  // 容器内没有 macOS 沙箱,sandbox 代理截断问题不存在,联网直接通。
+  "remoteUser": "dev"
+}

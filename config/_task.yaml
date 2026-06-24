@@ -1,0 +1,31 @@
+output:
+  dir: out
+regime:
+  gap_tolerance_min: 75
+  min_run: 3
+  one_hour: 1
+sampling:
+  core_interval_hours: 1
+  post_interval_hours: 4
+  pre_interval_hours: 4
+sources:
+  enabled:
+  - funding
+  - price
+symbols:
+- AAPLUSDT
+- MSFTUSDT
+- PRLUSDT
+- GUAUSDT
+- LAYERUSDT
+- IRYSUSDT
+- IDUSDT
+- HIVEUSDT
+- PROMPTUSDT
+- PROVEUSDT
+- ORCAUSDT
+window:
+  end: '2026-06-14'
+  post_horizon_days: 14
+  pre_lookback_days: 7
+  start: '2026-05-01'

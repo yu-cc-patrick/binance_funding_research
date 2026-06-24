@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# 产物(大文件,按需提交)
+out/*.png
+out/*.svg
+out/dataset.json
+out/metrics.json
+out/*.docx
+
+# 系统
+.DS_Store
+.Trash/
+
+# IDE
+.vscode/
+.idea/

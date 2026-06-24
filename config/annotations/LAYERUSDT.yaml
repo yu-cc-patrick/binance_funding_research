@@ -1,0 +1,20 @@
+panorama:
+- time: 2026-05-09 12:00
+  text: '解锁预期发酵
+
+    24h波动41%'
+  kind: news
+- time: 2026-05-11 00:00
+  text: '5/11 解锁30.77M枚
+
+    +鲸鱼活动砸盘'
+  kind: news
+- time: 2026-05-25 00:00
+  text: '退出后14天 -22.8%
+
+    解锁抛压未消化'
+  kind: logic
+zoom:
+- time: 2026-05-11 12:00
+  text: 区间内最负 -0.29%
+  kind: news

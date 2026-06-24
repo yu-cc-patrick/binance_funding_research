@@ -1,0 +1,24 @@
+panorama:
+- time: 2026-05-20 14:00
+  text: '疑除息/事件驱动
+
+    永续折价→负费率
+
+    切1h结算'
+  kind: logic
+- time: 2026-05-21 13:00
+  text: '折价收敛
+
+    恢复4h结算'
+  kind: logic
+- time: 2026-05-28 12:00
+  text: '退出后14天 +3.4%
+
+    回撤仅-1.7%
+
+    价格中性,结构性机会'
+  kind: logic
+zoom:
+- time: 2026-05-20 18:00
+  text: 最负 -0.22%
+  kind: news

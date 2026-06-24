@@ -1,0 +1,64 @@
+panorama:
+- time: 2026-05-27 17:00
+  text: '私钥泄露
+
+    1498万枚被劫持解锁
+
+    →链上瞬间抛售'
+  kind: news
+- time: 2026-05-28 12:00
+  text: '币价24h腰斩
+
+    费率打-2%封顶'
+  kind: news
+- time: 2026-06-10 21:00
+  text: '二次探底 0.42
+
+    OI清空至380万
+
+    恐慌完全出尽'
+  kind: logic
+zoom:
+- time: 2026-05-27 17:00
+  text: '最负 -2.00%(封顶)
+
+    恐慌做空'
+  kind: news
+
+# 入场/出场策略点位 —— 每点双评分(满分10):
+#   score_live   = 决策当时可见信息下的合理性(赔率×胜率)
+#   score_actual = 退出后真实价格验证的实际质量
+# ※ reason 第一句=图上核心逻辑, 后面=详细展开
+strategy:
+- time: 2026-05-27 20:00
+  price: 0.226
+  side: long_in
+  label: E1 插针抄底
+  score_live: 5.0
+  score_actual: 9.5
+  reason: '私钥泄露基本面崩坏接飞刀风险极高,但-86%插针+费率-2%封顶赔率惊人。
+    触底后7天摸1.16(+413%),神级抄底但事前极不确定。'
+- time: 2026-06-10 21:00
+  price: 0.47
+  side: long_in
+  label: E3 二次探底
+  score_live: 6.5
+  score_actual: 8.5
+  reason: 'OI从4000万清空至380万卖压衰竭,二次探底不破前低意味空头力竭。
+    8天反弹至1.10(+134%),确定性高于E1赔率优于E2。'
+- time: 2026-06-04 12:00
+  price: 1.16
+  side: long_out
+  label: X1 反弹顶止盈
+  score_live: 7.5
+  score_actual: 8.5
+  reason: '第一波反弹+413%遇前期套牢盘涨势乏力,落袋为安。
+    此后回落至0.42,不走则全回吐,离场正确。'
+- time: 2026-06-18 23:00
+  price: 1.28
+  side: long_out
+  label: X2 逼近前高
+  score_live: 7.0
+  score_actual: 7.0
+  reason: '自二次底+170%,逼近历史高点-25%处(高位区),获利了结。
+    数据截止于此,前方阻力重,中性偏多暂记7/10。'

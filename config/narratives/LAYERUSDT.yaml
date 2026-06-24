@@ -1,0 +1,10 @@
+label: B 类 · 解锁砸盘
+body: LAYER 是 **Solayer**（Solana 生态 restaking 项目）。其 1h 负费率区间（5-10 09:00 → 5-12 01:00）正好覆盖
+  **5 月 11 日的代币解锁**（约 30.77M 枚）。解锁前后市场抢跑抛售、叠加鲸鱼活动，LAYER 在 5/9 出现 41.3% 的 24h 剧烈波动（成交量暴增
+  396%）。解锁抛压把永续打到负费率（最负 -0.29%），交易所切 1h 结算。（注：Solayer 在 2025-05 也曾因约 $46M 解锁暴跌 45-60%，本次为
+  2026-05 的小额解锁事件。）
+sources:
+- https://www.gate.com/news/detail/solayer-layer-to-unlock-3077m-tokens-worth-262m-on-may-11-20801405
+- https://www.bitget.com/news/detail/12560605405170
+- https://defillama.com/unlocks/solayer
+verdict: ✗ 接飞刀

@@ -1,0 +1,9 @@
+label: C 类 · 股票永续
+body: MSFTUSDT 是币安的**微软股票永续**（2026-04-20 第二批上线）。同 AAPL，合约 24/7 而标的美股有休市，费率由永续相对指数的溢价/折价驱动。本事件在
+  **5-20 周三**（非周末），更可能由**除息（ex-dividend）或事件驱动**：币安对股票永续设有专门的《除息调整方法》(Dividend Adjustment
+  Methodology)，会在除息日下调价格并做费率补偿，可解释当日折价转负（最负 -0.22%，比 AAPL 更深）及随后切 1h 结算。（推断：未取得 MSFT
+  2026-05-20 具体除息确认。）
+sources:
+- https://www.binance.com/en/support/announcement/detail/16fe15060947481ab240fb398230a3ee
+- https://www.binance.info/en/support/faq/detail/fe7dcdf24f1943d98b368f5f9f744398
+verdict: ✓ 较好

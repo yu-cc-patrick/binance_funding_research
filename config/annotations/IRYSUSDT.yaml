@@ -1,0 +1,24 @@
+panorama:
+- time: 2026-05-15 13:00
+  text: 'Upbit现货上线
+
+    (KRW/BTC/USDT)
+
+    现货溢价拉升'
+  kind: news
+- time: 2026-05-16 12:00
+  text: '逆势做空拥挤
+
+    永续贴水→负费率
+
+    空头踩踏清算'
+  kind: logic
+- time: 2026-05-29 00:00
+  text: '退出后14天 -33.9%
+
+    情绪退潮均值回归'
+  kind: logic
+zoom:
+- time: 2026-05-15 18:00
+  text: 区间内最负 -1.29%
+  kind: news
