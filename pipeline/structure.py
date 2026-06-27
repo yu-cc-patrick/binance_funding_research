@@ -301,67 +301,207 @@ def _divergence(p_chg, oi_chg_c, oi_chg_u):
 
 
 # ═══════════════════════════════════════════════════════════════
-# 叙事文本生成
+# 叙事文本生成 —— 多指标联合推理, 模拟人工分析师的推理链
 # ═══════════════════════════════════════════════════════════════
 
 def _build_narrative_text(state, a1, a2, a3, dist,
                            oi_c, oi_u, fr_neg_r, fr_m, ls_t, ls_l,
                            sv_cv, div, long_s, pchg, vol):
-    """生成带颜色标记的分析文本。[!!]=高确定性信号, ⚪=中性, [!]=风险。"""
+    """生成多指标联合推理叙事。每段回答一个问题:
+    - 谁在加仓? 谁在离场? (OI+价格)
+    - 谁在付钱? 为什么? (FR)
+    - 聪明钱在做什么? (大户多空比)
+    - 当前最大的矛盾是什么?
+    - 做多/做空的逻辑链
+    """
     lines = []
+    is_crash = pchg < -0.10
+    is_pump = pchg > 0.10
+    is_extreme_vol = vol > 0.50
+    oi_exploded = oi_c > 0.50
+    oi_surged = oi_c > 0.20
+    oi_dropped = oi_c < -0.20
+    oi_moderate_drop = -0.20 <= oi_c < -0.05
+    fr_all_neg = fr_neg_r > 0.90
+    fr_mostly_neg = fr_neg_r > 0.50
+    fr_deeply_neg = fr_m < -0.005
+    ls_whale_long = ls_l is not None and ls_l > 1.5
+    ls_whale_short = ls_l is not None and ls_l < 0.8
+    ls_whale_exiting = ls_t < -0.15
+    ls_whale_entering = ls_t > 0.15
+    spot_weak = sv_cv < 0.15
+    oi_cleaned = oi_c < -0.15 and abs(pchg) < 0.05
+    oi_stalemate = abs(oi_c) < 0.10 and abs(pchg) < 0.03
+    crowding = oi_surged and pchg < 0.05
 
-    # 市场状态
-    lines.append(f"状态: {state['label']} (可信{state['confidence']})")
-    lines.append("")
+    # ═══════════════════════════════════════
+    # 1. 状态 + OI×价格 联合解读
+    # ═══════════════════════════════════════
+    if is_crash and oi_dropped:
+        lines.append(f"价格暴跌{abs(pchg)*100:.0f}%+持仓量锐减{abs(oi_c)*100:.0f}%")
+        if oi_u < oi_c - 0.10:
+            lines.append("OI_USDT降幅远超币本位→不止价格效应,杠杆多头正被大规模清算")
+        else:
+            lines.append("OI_USDT降幅≈币本位→减仓是价格下跌的被动结果,多头尚未踩踏出清")
+        lines.append("→这是崩溃/踩踏结构。恐慌做空+多头爆仓形成负反馈螺旋")
+        if fr_deeply_neg or fr_all_neg:
+            lines.append("FR极端负值是被恐慌做空砸出来的,不是逼空→负费率≠做多信号")
 
-    # 核心三分数
-    lines.append(f"二次逼空 {a1}  派发 {dist}  趋势 {a2}")
-    if a3 > 50:
-        lines.append(f"诱空 {a3}  [!]")
+    elif is_crash and oi_surged:
+        lines.append(f"价格暴跌{abs(pchg)*100:.0f}%但持仓量反增{oi_c*100:.0f}%")
+        lines.append("→资金在暴跌中逆势加仓。可能是抄底资金进场,也可能是空头在加码")
+        lines.append("OI增加=市场分歧加大,暴跌尚未形成一致性踩踏,短期方向不明")
 
-    # 做多确定性
-    if long_s >= 70:
-        lines.append(f"[!!] 做多确定性较高: {long_s}分")
-    elif long_s >= 40:
-        lines.append(f"做多确定性: {long_s}分 (中性)")
+    elif is_pump and oi_exploded:
+        lines.append(f"价格暴涨{abs(pchg)*100:.0f}%+持仓量暴增{abs(oi_c)*100:.0f}%")
+        lines.append("持仓量翻倍甚至数倍→散户FOMO追多+空头被迫加仓对冲,双向踩踏")
+        lines.append("→这是典型的climax pump。OI暴增远超价格涨幅=拥挤,不是健康趋势")
+        if fr_deeply_neg:
+            lines.append("费率被砸到深度负值→空头在踩踏中付钱,不是空头主动建仓")
+
+    elif crowding:
+        lines.append(f"价格几乎停滞({pchg*100:+.1f}%)但OI大增{oi_c*100:+.0f}%")
+        lines.append("→高控盘信号。大量仓位在横盘中建立,价格不涨=主力可能在派发")
+        lines.append("也可能是洗盘:用横盘消磨多头耐心,逼他们止损后主力接筹")
+        if fr_mostly_neg:
+            lines.append("FR持续负→空头在付钱扛仓。多空双方都被锁,就看谁先扛不住")
+
+    elif oi_cleaned:
+        lines.append(f"OI已下降{abs(oi_c)*100:.0f}%而价格稳定→洗盘完成信号")
+        lines.append("多头已被洗出,空头尚未大规模进场,主力可以在低位重新吸筹")
+        lines.append("→这是逼空的前置条件:仓位已清洗,剩下来的是坚定多头+等待中的主力")
+
+    elif oi_stalemate:
+        lines.append(f"价格窄幅震荡+OI几乎不动→多空双方僵持")
+        if fr_mostly_neg:
+            lines.append("FR持续负=空头在付钱,但价格不涨→买方力量不足,在等催化剂")
+        else:
+            lines.append("市场进入观望期,方向不明,等待突破")
+
     else:
-        lines.append(f"[!] 做多确定性低: {long_s}分")
+        # generic synthesis
+        oi_desc = "暴增" if oi_surged else ("下降" if oi_dropped else "稳定")
+        p_desc = "上涨" if pchg > 0.03 else ("下跌" if pchg < -0.03 else "横盘")
+        lines.append(f"价格{p_desc}+OI{oi_desc}。状态:{state['label']}({state['confidence']})")
+
     lines.append("")
 
-    # 关键指标
-    if abs(oi_c) > 0.1:
-        tag = "[!!]" if oi_c < -0.1 else "[!]"
-        lines.append(f"{tag} OI币本位变化 {oi_c:+.1f}%")
-    if sv_cv < 0.15:
-        lines.append(f"现货/合约量比 {sv_cv:.2f} (现货弱)")
-    if fr_neg_r > 0.5:
-        lines.append(f"[!!] FR {fr_neg_r:.0f}%时间负值 均值{fr_m*100:+.3f}%")
+    # ═══════════════════════════════════════
+    # 2. 谁在付钱? 资金费率解读
+    # ═══════════════════════════════════════
+    if fr_all_neg:
+        lines.append("FR全程负值→空头持续在付钱")
+        if is_crash:
+            lines.append("但价格在崩盘→空头付钱是被迫的(做空被套),不是主动缴械。负费率在此不是利多")
+        elif oi_dropped:
+            lines.append("OI下降+FR负→空头在撤退(平空仓付钱),而不是加仓。逼空燃料在减少")
+        elif crowding:
+            lines.append("OI高悬+FR负→空头被锁仓,多头等拉升。但谁先扛不住是未知数")
+        else:
+            lines.append("空头付钱+价格稳定→时间站在多头一边。但需要OI确认仓位在清洗而非堆积")
+    elif fr_mostly_neg:
+        lines.append(f"FR {fr_neg_r*100:.0f}%时间为负,均值{fr_m*100:+.3f}%→空头偏弱势,但未到极端")
+    else:
+        lines.append(f"FR以正为主(均值{fr_m*100:+.3f}%)→多头在付钱,市场偏多头主导")
+
+    # ═══════════════════════════════════════
+    # 3. 大户在做什么?
+    # ═══════════════════════════════════════
     if ls_l is not None:
-        tag = "[!!]" if ls_l > 1.5 else ("[!]" if ls_l < 0.8 else "")
-        if tag:
-            lines.append(f"{tag} 大户多空比 {ls_l:.2f} (趋势 {ls_t:+.2f})")
+        if ls_whale_long:
+            lines.append(f"大户多空比{ls_l:.2f}(>1.5)→大户净多头,聪明钱看好")
+        elif ls_whale_short:
+            lines.append(f"大户多空比{ls_l:.2f}(<0.8)→大户净空头,聪明钱看空")
+        else:
+            lines.append(f"大户多空比{ls_l:.2f}→中性")
+        if ls_whale_exiting:
+            lines.append(f"多空比下降{abs(ls_t):+.2f}→大户在减多/加空,信号偏空")
+        elif ls_whale_entering:
+            lines.append(f"多空比上升{ls_t:+.2f}→大户在加多,信号偏多")
 
-    # 背离
-    if div["narrative"] and "无显著" not in div["narrative"]:
-        lines.append(div["narrative"])
+    # ═══════════════════════════════════════
+    # 4. 成交量与现货
+    # ═══════════════════════════════════════
+    if spot_weak and sv_cv > 0:
+        lines.append(f"现货/合约量比仅{sv_cv:.2f}→现货买盘薄弱,涨势缺乏现货支撑")
+    elif sv_cv > 0.3:
+        lines.append(f"现货/合约比{sv_cv:.2f}→现货买盘活跃,涨势有真实需求支撑")
 
-    # 高确定性结论
+    # ═══════════════════════════════════════
+    # 5. 矛盾信号
+    # ═══════════════════════════════════════
+    contradictions = []
+    if fr_all_neg and is_crash:
+        contradictions.append("FR全负但价格暴跌:这不是逼空,是恐慌做空的果")
+    if oi_surged and pchg < -0.03:
+        contradictions.append("OI大增+价格下跌:资金在逆势加仓→可能是抄底,也可能是空头加码")
+    if ls_whale_long and pchg < -0.05:
+        contradictions.append("大户净多但价格下跌:大户可能在扛仓或被套,需观察是否止损")
+    if ls_whale_short and pchg > 0.05:
+        contradictions.append("大户净空但价格上涨:大户方向错了,可能出现空头踩踏")
+    if oi_dropped and not is_crash and fr_mostly_neg:
+        contradictions.append("OI降+FR负:如果OI在降,空头在减少→逼空的燃料不够。需等OI再次堆积")
+    if contradictions:
+        lines.append("")
+        lines.append("矛盾信号:")
+        for c in contradictions:
+            lines.append(f"  [!] {c}")
+
+    # ═══════════════════════════════════════
+    # 6. 做多/做空 逻辑链
+    # ═══════════════════════════════════════
+    bullish = []
+    bearish = []
+    if oi_cleaned:
+        bullish.append("OI已充分清洗→逼空前提满足")
+    if fr_all_neg and not is_crash:
+        bullish.append("FR全程负=空头持续付钱,时间站在多头")
+    if ls_whale_entering:
+        bullish.append("大户在加多")
+    if oi_surged and is_pump:
+        bearish.append("OI暴增=散户全进来了→顶部信号")
+    if crowding:
+        bearish.append("OI堆积+价格不涨=派发嫌疑")
+    if is_crash:
+        bearish.append("价格崩盘=不要接飞刀,等OI和价格都企稳")
+    if ls_whale_exiting:
+        bearish.append("大户在撤→跟聪明钱反向危险")
+    if fr_all_neg and is_crash:
+        bearish.append("暴跌中的负费率不是做多理由")
+
+    if bullish or bearish:
+        lines.append("")
+        if bullish:
+            lines.append("做多逻辑:")
+            for b in bullish:
+                lines.append(f"  [+] {b}")
+        if bearish:
+            lines.append("做空/回避逻辑:")
+            for b in bearish:
+                lines.append(f"  [-] {b}")
+
+    # ═══════════════════════════════════════
+    # 7. 核心评分与高确定性标注
+    # ═══════════════════════════════════════
+    lines.append("")
     if long_s >= 70:
-        lines.append("")
-        lines.append("[!!] 高确定性:")
+        lines.append(f"[!!] 做多确定性较高({long_s}) "
+                     f"逼空{a1} 派发{dist} 趋势{a2}")
         if a1 >= 60:
-            lines.append("  逼空结构成立,做多窗口")
+            lines.append("[!!] 逼空结构成立,做多窗口")
         if dist <= 20:
-            lines.append("  派发风险低,持仓安全")
-        if oi_c < -0.15:
-            lines.append("  持仓量已充分清洗")
+            lines.append("[!!] 派发风险低,持仓安全")
+    elif long_s >= 40:
+        lines.append(f"做多确定性中性({long_s}) "
+                     f"逼空{a1} 派发{dist} 趋势{a2}")
     elif dist >= 60:
-        lines.append("")
-        lines.append("[!!] 高确定性(空): 派发信号强")
-        lines.append("  不建议做多")
+        lines.append(f"[!!] 派发风险高({dist})→不建议做多 "
+                     f"逼空{a1} 趋势{a2}")
+    else:
+        lines.append(f"[!] 做多确定性低({long_s}) →回避做多 "
+                     f"逼空{a1} 派发{dist}")
 
-    if long_s <= 25:
-        lines.append("")
-        lines.append("[!!] 接飞刀风险极高,回避做多")
+    if is_crash and long_s <= 35:
+        lines.append("[!!] 接飞刀风险极高")
 
     return "\n".join(lines)

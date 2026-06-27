@@ -131,12 +131,18 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
                      (start, end, "#ffe1e1", "1h 区间"),
                      (end, post1, "#ddf5e1", "post · 恢复4h")]
 
-            # 7行网格 + 右栏分析文本 (fig加宽到30"留右栏)
-            fig = plt.figure(figsize=(30, 24))
+            # 7行网格. 右栏结构分析可选(config.plot.show_structure)
+            show_struct = cfg.get("plot", {}).get("show_structure", False)
+            if show_struct:
+                fig = plt.figure(figsize=(42, 24))
+                gs_right = 0.48
+            else:
+                fig = plt.figure(figsize=(22, 24))
+                gs_right = 0.97
             gs = fig.add_gridspec(
                 7, 2, height_ratios=[2.0, 2.8, 1.0, 1.0, 1.0, 0.8, 1.0],
                 width_ratios=[3, 2], hspace=0.28, wspace=0.12,
-                left=0.04, right=0.66)  # 右栏留给结构分析
+                left=0.05, right=gs_right)
             axW  = fig.add_subplot(gs[0, :])
             axP  = fig.add_subplot(gs[1, 0])
             axPz = fig.add_subplot(gs[1, 1])
@@ -199,26 +205,57 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
             _price_legend(axP, bands, annot)
             _bottom_tables(fig, annot.get("phases", []), annot.get("strategy", []))
 
-            # 右栏: 市场结构分析 (pre/1h/post 三窗口分别打分)
-            from pipeline.structure import analyze_window
-            structs = []
-            for b0, b1, _, label in bands:
-                r = analyze_window(entry["raw"], (ms(b0), ms(b1)))
-                r["band_label"] = label
-                structs.append(r)
-            _render_structure(fig, structs)
+            # 右栏: 每阶段结构分析 (可选, 由 config.plot.show_structure 控制)
+            show_structure = cfg.get("plot", {}).get("show_structure", False)
+            if show_structure:
+                from pipeline.structure import analyze_window
+                structs = []
+                phase_times = []
+                for ev in annot.get("panorama", []):
+                    txt = ev.get("text", "").strip()
+                    if txt and txt[0] == "P" and len(txt) >= 2 and txt[1].isdigit():
+                        try:
+                            t = datetime.strptime(ev["time"], "%Y-%m-%d %H:%M")
+                            t = t.replace(tzinfo=timezone.utc)
+                            phase_times.append((t, txt.split()[0], txt))
+                        except (ValueError, KeyError):
+                            continue
+                phase_times.sort(key=lambda x: x[0])
+                if len(phase_times) >= 2:
+                    for i in range(len(phase_times)):
+                        label = phase_times[i][1]
+                        t0 = phase_times[i][0]
+                        t1 = (phase_times[i + 1][0] if i + 1 < len(phase_times)
+                              else t0 + timedelta(days=7))
+                        if (t1 - t0).total_seconds() < 3600:
+                            continue
+                        try:
+                            r = analyze_window(entry["raw"], (ms(t0), ms(t1)))
+                            r["band_label"] = f"{label} {phase_times[i][2][:30]}"
+                            structs.append(r)
+                        except Exception:
+                            continue
+                else:
+                    for b0, b1, _, label in bands:
+                        r = analyze_window(entry["raw"], (ms(b0), ms(b1)))
+                        r["band_label"] = label
+                        structs.append(r)
+                _render_structure(fig, structs)
+
             fig.suptitle(f"{sym} — 资金费率 1h+负费率事件 · 多维分析",
                          fontsize=17, y=0.997)
 
             os.makedirs(out_dir, exist_ok=True)
+            prefix = cfg.get("plot", {}).get("filename_prefix", "")
+            stem = f"{prefix}{sym}"
             # PNG
-            path_png = os.path.join(out_dir, f"{sym}.png")
+            path_png = os.path.join(out_dir, f"{stem}.png")
             fig.savefig(path_png, dpi=120, bbox_inches="tight")
             # SVG — Inkscape 可编辑(文字为真实 text 元素, gid 可定位)
-            path_svg = os.path.join(out_dir, f"{sym}.svg")
+            path_svg = os.path.join(out_dir, f"{stem}.svg")
             fig.savefig(path_svg, format="svg", bbox_inches="tight")
             plt.close(fig)
-            print(f"saved {sym}.png + .svg", file=sys.stderr)
+            print(f"saved {stem}.png + .svg", file=sys.stderr)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -602,34 +639,21 @@ def _bottom_tables(fig, phases, strat):
 
 
 def _render_structure(fig, structs):
-    """右栏渲染三个窗口的市场结构分析。🔴行用红色, 普通行黑色。"""
-    x_base = 0.68  # 右栏起始 x (fig相对坐标)
-    y_positions = [0.935, 0.60, 0.28]  # pre / 1h / post 三块的顶部 y
-    for si, st in enumerate(structs):
-        if si >= len(y_positions):
-            break
-        y = y_positions[si]
+    """右栏渲染市场结构分析——连续文本块, 每阶段用 P1▸ 标记隔开, 无框无分隔线。"""
+    if not structs:
+        return
+    # 拼接所有阶段的叙事为一段连续文本
+    parts = []
+    for st in structs:
         label = st.get("band_label", "?")
-        lines = st.get("narrative", "").split("\n")
-        # 标题行
-        fig.text(x_base, y, f"▌{label} 结构分析",
-                 fontsize=10, fontweight="bold", ha="left", va="top")
-        y -= 0.028
-        # 逐行渲染, 🔴 行标红
-        for line in lines:
-            is_red = "[!!]" in line[:10]  # [!!] 标记 → 红色高确定信号
-            fig.text(x_base, y, line,
-                     fontsize=7.3 if not is_red else 8.0,
-                     ha="left", va="top",
-                     color="#c0392b" if is_red else "#333",
-                     fontweight="bold" if is_red else "normal",
-                     linespacing=1.15)
-            y -= 0.020 if not is_red else 0.024
-        # 分隔线
-        if si < len(structs) - 1:
-            fig.text(x_base, y - 0.004,
-                     "─" * 40, fontsize=6, ha="left", va="top",
-                     color="#ddd")
+        parts.append(f"【{label}】")
+        parts.append(st.get("narrative", ""))
+        parts.append("")  # 空行隔开
+    full_text = "\n".join(parts).strip()
+
+    fig.text(0.55, 0.97, full_text,
+             fontsize=5.5, ha="left", va="top",
+             color="#333", linespacing=1.15, wrap=True)
 
 
 def _annotate(ax, kl, events, x0, x1, top_frac):

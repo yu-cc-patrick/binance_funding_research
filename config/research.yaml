@@ -32,5 +32,9 @@ market_cap:
 
 symbols: ["AAPLUSDT","MSFTUSDT","GUAUSDT","HIVEUSDT","IDUSDT","IRYSUSDT","LAYERUSDT","ORCAUSDT","PRLUSDT","PROMPTUSDT","PROVEUSDT"]
 
+plot:
+  show_structure: false         # true=右栏显示市场结构分析文字
+  filename_prefix: "6.26_"      # 输出文件名前缀(日期版本)
+
 output:
   dir: out

@@ -1,8 +1,10 @@
 panorama:
-- time: 2026-05-29 17:00
-  text: 'SPACE ID 单日暴涨~44%
+- time: 2026-05-30 03:00
+  text: 'Upbit成交暴增
 
-    (Upbit成交激增)'
+    贪婪指数见顶
+
+    单日暴涨+33%'
   kind: news
 - time: 2026-05-30 12:00
   text: '逐顶做空→负费率
@@ -10,11 +12,16 @@ panorama:
     切1h结算'
   kind: logic
 - time: 2026-06-08 00:00
-  text: '退出后14天 -26.3%
+  text: '退出后14天 -26%
 
     暴涨后回归向下'
   kind: logic
 zoom:
-- time: 2026-05-30 00:00
-  text: 区间内最负 -0.51%
+- time: 2026-05-30 03:00
+  text: '爆拉+18.9%/h
+
+    Upbit FOMO'
+  kind: news
+- time: 2026-05-30 12:00
+  text: '区间内最负 -0.51%'
   kind: news
