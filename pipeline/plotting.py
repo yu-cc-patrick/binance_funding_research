@@ -98,10 +98,13 @@ def _stat_segment(data, lo_ms, hi_ms, key):
 # ══════════════════════════════════════════════════════════════════
 
 def run(dataset_path: str, annotations_dir: str, out_dir: str,
-        metrics_path: str | None = None):
+        metrics_path: str | None = None, plot_overrides: dict | None = None):
     import yaml
     ds = json.load(open(dataset_path))
     cfg = ds["config"]
+    # 应用 CLI 覆盖 (prefix, show_structure 等)
+    if plot_overrides:
+        cfg.setdefault("plot", {}).update(plot_overrides)
     pre_d = cfg["window"]["pre_lookback_days"]
     post_d = cfg["window"]["post_horizon_days"]
     mt = json.load(open(metrics_path)) if metrics_path and \

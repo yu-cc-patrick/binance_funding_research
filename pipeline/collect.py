@@ -37,6 +37,15 @@ def load_source(name: str):
 def run(cfg_path: str, out_dir: str) -> list[str]:
     """返回命中的 symbol 列表。输出 out_dir/dataset.json。"""
     cfg = load_config(cfg_path)
+    return _run_with_cfg(cfg, out_dir)
+
+
+def run_with_cfg(cfg: dict, out_dir: str) -> list[str]:
+    """同 run(), 但不读磁盘 config, 直接用传入的 cfg dict。"""
+    return _run_with_cfg(cfg, out_dir)
+
+
+def _run_with_cfg(cfg: dict, out_dir: str) -> list[str]:
     ws, we = cfg["window"]["start"], cfg["window"]["end"]
     import datetime as _dt
     window = (datetime.strptime(ws, "%Y-%m-%d").replace(tzinfo=timezone.utc),
