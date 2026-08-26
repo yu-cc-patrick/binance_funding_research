@@ -1,0 +1,58 @@
+panorama:
+# ---- 爆拉/暴跌事件 (kind: news, 红框) ----
+- time: 2025-12-01 00:00
+  text: '解锁: 2130万枚(流通15.3%)\n~2040万, 首次大额解锁'
+  kind: news
+- time: 2025-12-12 13:00
+  text: '首波爆拉+12.7%/h\nAI+GameFi叙事\nWeb3游戏板块12月领涨'
+  kind: news
+- time: 2025-12-15 04:00
+  text: '单小时最大涨幅+19.7%\nBinance Alpha上线\n低流通量(16%流通)放大波动'
+  kind: news
+- time: 2025-12-22 14:00
+  text: 'ATH 4.35, +5000% from TGE\n流通市值~5.65亿\n无实质性利好支撑5000%涨幅\n低流通+对倒拉盘是主因'
+  kind: news
+- time: 2025-12-24 01:00
+  text: '单小时砸盘-14.7%\n提前抢跑1/1大解锁\n市场类比Bitlight(LIGHT)\n(LIGHT在BNB Chain崩盘75%+)'
+  kind: news
+- time: 2026-01-01 00:00
+  text: '解锁: 4757万(流通15.3%)\n当周第二大解锁(仅次于SUI)\n12个月cliff到期: 团队+顾问+天使\n解锁当天跌破1'
+  kind: news
+- time: 2025-12-26 03:00
+  text: '死猫反弹+23.4%/h'
+  kind: news
+
+# ---- 价格里程碑 (kind: logic, 蓝框) ----
+- time: 2025-12-21 20:00
+  text: '单日+33%\n冲刺ATH'
+  kind: logic
+- time: 2026-01-02 12:00
+  text: '退出1h结算\n价格0.89, ATH以来-80%'
+  kind: logic
+
+zoom:
+# ---- 1h放大视图: regime窗口(12/14~01/02) ----
+- time: 2025-12-14 18:00
+  text: '4h->1h结算切换\n爆拉+14.0%/h'
+  kind: news
+- time: 2025-12-15 04:00
+  text: '最大爆拉+19.7%/h\nBinance Alpha上线'
+  kind: news
+- time: 2025-12-16 12:00
+  text: '首次崩盘-16.5%/h\n获利盘出逃'
+  kind: news
+- time: 2025-12-17 00:00
+  text: '二次拉升+15.3%/h'
+  kind: news
+- time: 2025-12-21 20:00
+  text: 'ATH冲刺+13.1%/h\n峰值4.35'
+  kind: news
+- time: 2025-12-24 01:00
+  text: '解锁恐慌-14.7%/h\n抢跑1/1大解锁'
+  kind: news
+- time: 2025-12-26 03:00
+  text: '死猫反弹+23.4%/h'
+  kind: news
+- time: 2026-01-01 08:00
+  text: '击穿1 (-80% from ATH)\n1/1解锁4757万到账'
+  kind: news

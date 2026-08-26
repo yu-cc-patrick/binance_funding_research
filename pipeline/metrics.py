@@ -28,7 +28,8 @@ def run(dataset_path: str, out_dir: str) -> str:
 
         # ---- 全程高低位判断(基于日线) ----
         daily = entry["raw"].get("daily", [])
-        market = _market_position(daily, circ_map.get(sym, circ_default))
+        oi_raw = entry["raw"].get("open_interest", [])
+        market = _market_position(daily, circ_map.get(sym, circ_default), oi_raw)
         if market:
             market["circulating"] = circ_map.get(sym, circ_default)
 
@@ -97,10 +98,10 @@ def run(dataset_path: str, out_dir: str) -> str:
     return path
 
 
-def _market_position(daily: list, circulating) -> dict | None:
+def _market_position(daily: list, circulating, oi_data: list | None = None) -> dict | None:
     """从全程日线判断价格整体处于高位还是低位。
     返回 {ath, atl, last, from_ath_pct, range_pos_pct, chg_30d_pct,
-          mcap_last, mcap_ath, verdict}。"""
+          mcap_last, mcap_ath, oi_peak_coin, oi_pct_circ, verdict}。"""
     if not daily:
         return None
     ath = max(k["h"] for k in daily)
@@ -127,6 +128,12 @@ def _market_position(daily: list, circulating) -> dict | None:
     if circulating:
         out["mcap_last"] = round(last * circulating / 1e6, 1)   # 百万美元
         out["mcap_ath"] = round(ath * circulating / 1e6, 1)
+    # OI 币本位峰值与流通占比（用于判断合约杠杆集中度）
+    if oi_data and circulating:
+        oi_peaks_coin = [r.get("oi", 0) for r in oi_data if r.get("oi")]
+        if oi_peaks_coin:
+            out["oi_peak_coin"] = int(max(oi_peaks_coin))
+            out["oi_pct_circ"] = round(out["oi_peak_coin"] / circulating * 100, 2)
     # 高低位裁定: 综合距高点 + 区间位置
     if range_pos >= 70:
         out["verdict"] = "高位"

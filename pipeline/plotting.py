@@ -140,12 +140,12 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
                 fig = plt.figure(figsize=(42, 24))
                 gs_right = 0.48
             else:
-                fig = plt.figure(figsize=(22, 24))
+                fig = plt.figure(figsize=(22, 28))
                 gs_right = 0.97
             gs = fig.add_gridspec(
-                7, 2, height_ratios=[2.0, 2.8, 1.0, 1.0, 1.0, 0.8, 1.0],
+                8, 2, height_ratios=[2.0, 2.8, 1.0, 1.0, 1.0, 0.8, 1.0, 1.0],
                 width_ratios=[3, 2], hspace=0.28, wspace=0.12,
-                left=0.05, right=gs_right)
+                left=0.05, right=gs_right, bottom=0.06, top=0.95)
             axW  = fig.add_subplot(gs[0, :])
             axP  = fig.add_subplot(gs[1, 0])
             axPz = fig.add_subplot(gs[1, 1])
@@ -159,6 +159,8 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
             axLz = fig.add_subplot(gs[5, 1], sharex=axPz)
             axF  = fig.add_subplot(gs[6, 0], sharex=axP)
             axFz = fig.add_subplot(gs[6, 1], sharex=axPz)
+            axC  = fig.add_subplot(gs[7, 0], sharex=axP)
+            axCz = fig.add_subplot(gs[7, 1], sharex=axPz)
 
             _draw_weekly(axW, weekly, market, sym, start, end)
 
@@ -170,34 +172,51 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
             _draw_price(axP, kl, bands, pre0, post1)
             _draw_price(axPz, kl_zoom, bands, zoom0, zoom1)
 
-            # OI USDT (全景4h重采样, 放大1h重采样)
+            # OI USDT (全景=1h, 和K线一一对应; 放大=1h)
             _draw_oi(axOu, oi_data, bands, pre0, post1, "oi_val",
-                     "持仓量 USDT\n(百万)", resample_hours=4)
+                     "持仓量 USDT\n(百万)", resample_hours=1)
             _draw_oi(axOuz, oi_data, bands, zoom0, zoom1, "oi_val",
                      "持仓量 USDT\n(百万)", resample_hours=1)
             # OI 币本位
             _draw_oi(axOb, oi_data, bands, pre0, post1, "oi",
-                     "持仓量 币本位\n(百万枚)", resample_hours=4)
+                     "持仓量 币本位\n(百万枚)", resample_hours=1)
             _draw_oi(axObz, oi_data, bands, zoom0, zoom1, "oi",
                      "持仓量 币本位\n(百万枚)", resample_hours=1)
 
             # 成交量 (合约+现货)
             cvol_data = entry["raw"].get("price", [])  # 含v字段
             svol_data = entry["raw"].get("spot_volume", [])
-            _draw_volume(axV, cvol_data, svol_data, bands, pre0, post1, 4)
-            _draw_volume(axVz, cvol_data, svol_data, bands, zoom0, zoom1, 1)
+            gecko_data = entry["raw"].get("coingecko_spot", [])
+            _draw_volume(axV, cvol_data, svol_data, gecko_data, bands, pre0, post1, 1)
+            _draw_volume(axVz, cvol_data, svol_data, gecko_data, bands, zoom0, zoom1, 1)
 
             # 大户多空比
-            _draw_ls_ratio(axL, oi_data, bands, pre0, post1, 4)
+            _draw_ls_ratio(axL, oi_data, bands, pre0, post1, 1)
             _draw_ls_ratio(axLz, oi_data, bands, zoom0, zoom1, 1)
 
             # 费率
             _draw_funding(axF, fund_data, bands, pre0, post1, True)
             _draw_funding(axFz, fund_data, bands, zoom0, zoom1, False)
 
-            # 标注
-            _annotate(axP, kl, annot.get("panorama", []), loP, hiP, 1.75)
-            _annotate(axPz, kl_zoom, annot.get("zoom", []), loZ, hiZ, 1.42)
+            # CVD (累积成交量差: 涨量-跌量, 用原始 price 数据含 volume)
+            _draw_cvd(axC, price_data, bands, pre0, post1)
+            _draw_cvd(axCz, [k for k in price_data if ms(zoom0) <= k["t"] <= ms(zoom1)], bands, zoom0, zoom1)
+
+            # 标注 — 图上只标字母, 底部整段列文字
+            ann_pano = _annotate(axP, kl, annot.get("panorama", []), loP, hiP, 1.75)
+            ann_zoom = _annotate(axPz, kl_zoom, annot.get("zoom", []), loZ, hiZ, 1.42,
+                                 label_offset=len(ann_pano))
+            all_ann = {**ann_pano, **ann_zoom}
+            # 现货说明 — 从 annotation 中读取(如有), 否则用默认
+            spot_note = annot.get("spot_note", "")
+            if not spot_note:
+                if entry["raw"].get("spot_volume"):
+                    spot_note = ""
+                elif sym in ("AAPLUSDT", "MSFTUSDT"):
+                    spot_note = "现货: 美股永续, 无加密货币现货市场"
+                else:
+                    spot_note = "现货没有单一的主战场(币安无现货数据, 未查链上)"
+            _text_panel(fig, all_ann, spot_note)
             _mark_strategy(axP, kl, annot.get("strategy", []), loP, hiP)
             # 阶段叙事 → 独立表格(不标在图上, 避免遮挡)
 
@@ -250,7 +269,9 @@ def run(dataset_path: str, annotations_dir: str, out_dir: str,
 
             os.makedirs(out_dir, exist_ok=True)
             prefix = cfg.get("plot", {}).get("filename_prefix", "")
-            stem = f"{prefix}{sym}"
+            n_regimes = len(entry["regimes"])
+            suffix = f"_r{ri+1}" if n_regimes > 1 else ""
+            stem = f"{prefix}{sym}{suffix}"
             # PNG
             path_png = os.path.join(out_dir, f"{stem}.png")
             fig.savefig(path_png, dpi=120, bbox_inches="tight")
@@ -295,6 +316,12 @@ def _draw_weekly(ax, weekly, market, sym, ev_start, ev_end):
               if market.get("mcap_ath") else "")
         circ = market.get("circulating")
         circ_s = f"(流通≈{circ/1e6:g}M枚)" if circ else "(无流通量,仅价格)"
+        # OI/流通占比
+        oi_peak = market.get("oi_peak_coin")
+        oi_pct = market.get("oi_pct_circ")
+        oi_s = (f"合约OI峰值 {oi_peak/1e6:.1f}M张\n"
+                f"占流通量 {oi_pct}%\n"
+                if oi_peak and oi_pct else "")
         verdict = market.get("verdict", "?")
         vcol = {"高位": "#c0392b", "中位": "#e08a00",
                 "低位": "#2ca02c"}.get(verdict, "#333")
@@ -302,7 +329,7 @@ def _draw_weekly(ax, weekly, market, sym, ev_start, ev_end):
                f"距高点 {market.get('from_ath_pct','?')}%\n"
                f"区间位置 {market.get('range_pos_pct','?')}%\n"
                f"近30日 {market.get('chg_30d_pct','?')}%\n"
-               f"{mc}{circ_s}")
+               f"{mc}{oi_s}{circ_s}")
         ax.text(0.995, 0.96, txt, transform=ax.transAxes, ha="right",
                 va="top", fontsize=9, zorder=10,
                 bbox=dict(boxstyle="round,pad=0.5", fc="#fffbe6",
@@ -349,13 +376,14 @@ def _draw_oi(ax, oi, bands, x0, x1, field, ylabel, resample_hours=1):
     bk_ts = sorted(buckets)
     if not bk_ts:
         return
-    w = (to_num(hi) - to_num(lo)) / max(len(bk_ts), 1) * 0.85
+    w = (resample_hours / 24) * 0.7
     scale = 1e6  # → 百万
+    half_bucket = bucket_ms / 2
     prev = None
     for t in bk_ts:
         val = buckets[t] / scale
         col = GREY if prev is None else (GREEN if val >= prev else RED)
-        ax.bar(to_num(t), val, width=w, color=col, alpha=0.8, zorder=2)
+        ax.bar(to_num(t + half_bucket), val, width=w, color=col, alpha=0.8, zorder=2)
         prev = val
     ax.set_ylabel(ylabel)
     ax.grid(True, axis="y", alpha=0.25)
@@ -388,8 +416,35 @@ def _draw_funding(ax, fund, bands, x0, x1, full):
         lab.set_ha("right")
 
 
-def _draw_volume(ax, cvol, svol, bands, x0, x1, resample_hours):
-    """成交量柱状图: 合约(左轴·蓝) + 现货(右轴·橙), 按resample_hours分桶。"""
+def _draw_cvd(ax, price_data, bands, x0, x1):
+    """CVD 累积成交量差 = cumsum(涨量-跌量), 柱+折线。
+    price_data: [{t,o,h,l,c,v}, ...]"""
+    to_num = _to_num
+    _bands(ax, bands)
+    lo, hi = ms(x0), ms(x1)
+    pts = sorted(price_data, key=lambda k: k["t"])
+    if not pts: return
+    cvd, xs, ys, cols = 0, [], [], []
+    for k in pts:
+        t, c, o, v = k["t"], k["c"], k["o"], k.get("v", 0)
+        if not (lo <= t <= hi): continue
+        delta = v if c >= o else -v
+        cvd += delta
+        xs.append(to_num(t))
+        ys.append(cvd)
+        cols.append("#2ca02c" if delta >= 0 else "#d62728")
+    if not xs: return
+    deltas = [ys[0]] + [ys[i]-ys[i-1] for i in range(1, len(ys))]
+    ax.bar(xs, deltas, width=(1.0/24)*0.7, color=cols, alpha=0.6, zorder=2)
+    ax.plot(xs, ys, color="#1f77b4", linewidth=1.2, zorder=3)
+    ax.axhline(0, color="#333", linewidth=0.6, linestyle="--", alpha=0.5)
+    ax.set_ylabel("CVD\n(累积量差)")
+    ax.grid(True, axis="y", alpha=0.2)
+    ax.set_xlim(to_num(lo), to_num(hi))
+
+
+def _draw_volume(ax, cvol, svol, gecko_vol=None, bands=None, x0=None, x1=None, resample_hours=4):
+    """成交量柱状图: 合约(左轴·蓝) + 现货(右轴·橙·CoinGecko全市场), 按resample_hours分桶。"""
     to_num = _to_num
     _bands(ax, bands)
     lo, hi = ms(x0), ms(x1)
@@ -399,34 +454,43 @@ def _draw_volume(ax, cvol, svol, bands, x0, x1, resample_hours):
         if lo <= k["t"] <= hi:
             bk = (k["t"] // bucket_ms) * bucket_ms
             cv_buckets[bk] = cv_buckets.get(bk, 0) + k.get("v", 0)
+    # 现货: 有币安用币安, 没有就用 CoinGecko
+    spot_source = svol if svol else (gecko_vol or [])
+    spot_label = "现货 币安" if svol else ("全市场现货\nCoinGecko" if gecko_vol else "现货")
+    nobucket = any(s.get("_nobucket") for s in spot_source)  # CoinGecko 滚动24h量
     sv_buckets = {}
-    for s in svol:
+    for s in spot_source:
         if lo <= s["t"] <= hi:
             bk = (s["t"] // bucket_ms) * bucket_ms
-            sv_buckets[bk] = sv_buckets.get(bk, 0) + s.get("vol", 0)
+            if nobucket:
+                # CoinGecko 滚动24h量: 取最大值不求和
+                sv_buckets[bk] = max(sv_buckets.get(bk, 0), s.get("vol", 0))
+            else:
+                sv_buckets[bk] = sv_buckets.get(bk, 0) + s.get("vol", 0)
     all_bk = sorted(set(cv_buckets) | set(sv_buckets))
     if not all_bk:
         return
     scale = 1e6
-    w = (to_num(hi) - to_num(lo)) / max(len(all_bk), 1) * 0.85
-    ax_s = ax.twinx()  # 右轴给现货
+    w = (resample_hours / 24) * 0.7  # 和 K 线同宽度
+    half_bucket = bucket_ms / 2  # bar 居中，和 K 线对齐
+    ax_s = ax.twinx()
     for bk in all_bk:
         cv = cv_buckets.get(bk, 0) / scale
         sv = sv_buckets.get(bk, 0) / scale
-        x = to_num(bk)
+        x = to_num(bk + half_bucket)  # 居中
         if cv > 0:
             ax.bar(x, cv, width=w, color="#6a9fb5", alpha=0.6, zorder=3)
         if sv > 0:
             ax_s.bar(x, sv, width=w * 0.6, color="#e67e22", alpha=0.7, zorder=4)
     ax.set_ylabel("合约量\n(百万 USDT)", color="#4a7a9a")
-    ax_s.set_ylabel("现货量\n(百万 USDT)", color="#c06014")
+    ax_s.set_ylabel(f"{spot_label}\n(百万 USDT)", color="#c06014")
     ax_s.tick_params(axis="y", colors="#c06014")
     ax.grid(True, axis="y", alpha=0.2)
     ax.set_xlim(to_num(lo), to_num(hi))
     from matplotlib.patches import Patch
     ax.legend(handles=[
         Patch(fc="#6a9fb5", alpha=0.6, label="合约(左轴)"),
-        Patch(fc="#e67e22", alpha=0.7, label="现货(右轴)")],
+        Patch(fc="#e67e22", alpha=0.7, label=f"{spot_label}(右轴)")],
         loc="upper left", fontsize=7, framealpha=0.8)
 
 
@@ -659,43 +723,63 @@ def _render_structure(fig, structs):
              color="#333", linespacing=1.15, wrap=True)
 
 
-def _annotate(ax, kl, events, x0, x1, top_frac):
-    """标注事件文本框 + 箭头。纯叙事,不标数据。gid 供 Inkscape 编辑。"""
+def _annotate(ax, kl, events, x0, x1, top_frac, label_offset=0):
+    """在价格图上标字母/数字标记(不写长文字),返回 {字母: text} 映射供底部面板。"""
+    result = {}
     if not events:
-        return
+        return result
     series = {t: (o, h, l, c) for t, o, h, l, c in kl}
     times = sorted(series)
     if not times:
-        return
-    pmin = min(series[t][2] for t in times)
-    pmax = max(series[t][1] for t in times)
+        return result
+    pmin, pmax = min(series[t][2] for t in times), max(series[t][1] for t in times)
     span = pmax - pmin or 1.0
-    xspan = (x1 - x0) or 1.0
 
     def price_near(m):
         return series[min(times, key=lambda t: abs(t - m))]
 
-    # 错开纵向位置避免重叠
-    yslots = [1.55, 1.32, 1.10, 1.44, 1.22, 1.35]
+    # label字母: A-Z then a-z
+    labels = [chr(65 + i) for i in range(26)] + [chr(97 + i) for i in range(26)]
+    yslots = [0.82, 0.72, 0.62, 0.77, 0.67, 0.73]
+
     for i, ev in enumerate(events):
-        dt = datetime.strptime(ev["time"], "%Y-%m-%d %H:%M").replace(
-            tzinfo=timezone.utc)
+        dt = datetime.strptime(ev["time"], "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
         m = ms(dt)
+        if m < x0 or m > x1:
+            continue
         x = mdates.date2num(dt)
-        rel = (m - x0) / xspan
-        dx = (0.5 - rel) * (xspan / 86400000.0) * 0.15
         _, h, _, _ = price_near(m)
-        y_text = pmin + span * yslots[i % len(yslots)]
+        # 标记点画在高点上方
+        y_mark = h + span * 0.04
         k = ev.get("kind", "logic")
-        face = "#e8f0fe" if k == "logic" else "#fdecea"
-        edge = "#1a73e8" if k == "logic" else "#c0392b"
-        gid = f"annot-{i}-{k}"
-        ax.annotate(
-            ev["text"], xy=(x, h), xytext=(x + dx, y_text),
-            ha="center", va="bottom", fontsize=8.5, zorder=20,
-            gid=gid,
-            bbox=dict(boxstyle="round,pad=0.4", fc=face, ec=edge,
-                      lw=1.3, alpha=0.97),
-            arrowprops=dict(arrowstyle="->", color=edge, lw=1.5,
-                            connectionstyle="arc3,rad=0.15"))
+        color = "#c0392b" if k == "news" else "#1a73e8"
+        idx = label_offset + len(result)
+        lbl = labels[idx % len(labels)]
+        # 画带圈字母
+        ax.annotate(lbl, xy=(x, y_mark), ha="center", va="bottom",
+                    fontsize=9, fontweight="bold", color="white", zorder=25,
+                    bbox=dict(boxstyle="circle,pad=0.3", fc=color, ec=color, lw=1.2, alpha=0.92))
+        result[lbl] = ev["text"].replace("\n", " ")
     ax.set_ylim(pmin - span * 0.05, pmin + span * top_frac)
+    return result
+
+
+def _text_panel(fig, annotations: dict, spot_note: str = ""):
+    """在图表底部画紧凑文字面板, 列出所有标注的详细说明。"""
+    if not annotations and not spot_note:
+        return
+    lines = []
+    items = sorted(annotations.items())
+    if items:
+        parts = []
+        for lbl, txt in items:
+            parts.append(f"[{lbl}] {txt}")
+        lines.append("  ".join(parts))
+    if spot_note:
+        lines.append(spot_note)
+
+    text = "\n".join(lines)
+    fig.text(0.04, 0.003, text, ha="left", va="bottom", fontsize=7.5,
+             fontfamily=plt.rcParams["font.family"],
+             bbox=dict(boxstyle="round,pad=0.5", fc="#fafafa", ec="#aaa",
+                      lw=0.8, alpha=0.95))

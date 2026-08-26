@@ -1,40 +1,33 @@
-# 研究参数（集中配置 — 改窗口/阈值/启用数据源只动这里）
-window:
-  start: "2026-05-01"
-  end: "2026-06-18"            # 6 月 dump 发布后改成当天日期
-  lifetime_start: "2025-11-01" # 全程视图(周线/高低位)起点; 取合约上市月
-  pre_lookback_days: 7
-  post_horizon_days: 20         # 加大到能覆盖 6/18 的二次反弹
-
-regime:
-  one_hour: 1                   # 结算周期阈值（小时）
-  min_run: 3                    # 最少连续点数才算有效区间
-  gap_tolerance_min: 75         # 回退到 gap 推断时的容差（分钟）
-
-sampling:
-  pre_interval_hours: 4
-  core_interval_hours: 1
-  post_interval_hours: 4
-
-sources:
-  enabled:
-    - funding
-    - price
-    - open_interest             # 持仓量 + 多空比 (daily metrics, 5min)
-    - daily                     # 全程日线 (周线聚合 + 高低位判断)
-    - spot_volume               # 现货成交量 (spot 1h K线, 月+日度dump)
-
-# 市值口径(判断价格整体高低用) —— dump 无流通量, 这里手填名义流通量
 market_cap:
-  circulating:                  # 单位: 枚。来源各家不一, 取一个并注明
-    GUAUSDT: 45000000           # CMC/Bybit/cryptorank 一致口径 ~45M
-  default_circulating: null     # 未列出的币: null=不算流通市值, 仅按价格判断
-
-symbols: ["AAPLUSDT","MSFTUSDT","GUAUSDT","HIVEUSDT","IDUSDT","IRYSUSDT","LAYERUSDT","ORCAUSDT","PRLUSDT","PROMPTUSDT","PROVEUSDT"]
-
-plot:
-  show_structure: false         # true=右栏显示市场结构分析文字
-  filename_prefix: "6.26_"      # 输出文件名前缀(日期版本)
-
+  circulating:
+    GUAUSDT: 45000000
+    NFPUSDT: null
+    RAVEUSDT: 252480000
+  default_circulating: null
 output:
   dir: out
+plot:
+  filename_prefix: NFP_
+  show_structure: false
+regime:
+  gap_tolerance_min: 75
+  min_run: 3
+  one_hour: 1
+sampling:
+  core_interval_hours: 1
+  post_interval_hours: 4
+  pre_interval_hours: 4
+sources:
+  enabled:
+  - funding
+  - price
+  - open_interest
+  - daily
+symbols:
+- NFPUSDT
+window:
+  end: '2026-07-01'
+  lifetime_start: '2025-11-01'
+  post_horizon_days: 20
+  pre_lookback_days: 7
+  start: '2026-01-01'

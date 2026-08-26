@@ -1,0 +1,56 @@
+panorama:
+# ===== Regime 1: 2025-12-20 ~ 2026-01-02 =====
+- time: 2025-08-15 00:00
+  text: 'GameSquare(NASDAQ:GAME)\n购入250万 ANIME\n机构背书入场'
+  kind: news
+- time: 2025-12-18 00:00
+  text: '技术突破: 站上50日EMA\n打破近1年下降通道\n成交量暴增+718%'
+  kind: news
+- time: 2025-12-20 06:00
+  text: '首波爆拉+13.6%/h\n4h->1h结算切换\n2025年1月上线后已跌95%\nATH 5亿市值->当前约5000万'
+  kind: news
+- time: 2025-12-23 11:00
+  text: '连续拉升+10%+10%\n7日涨幅+59.6%\nRSI 73.7 严重超买\n价格~0.01(相较上线ATH仍-95%)'
+  kind: news
+- time: 2026-01-02 12:00
+  text: '退出1h结算\n已解锁流通量44%'
+  kind: news
+
+# ===== Regime 2: 2026-03-17 ~ 2026-03-19 =====
+- time: 2026-03-17 00:00
+  text: 'Gate#0纪念铸造\nAnimechain单日61.5万次铸造\n91.2万笔交易, 成交量2.398亿\nOpenSea原生支持铸造\n1h结算触发, 爆拉+14.3%/h'
+  kind: news
+- time: 2026-03-19 17:00
+  text: '退出1h结算\n事件驱动结束\n短暂2.5天异常'
+  kind: news
+
+# ===== 价格里程碑 =====
+- time: 2025-12-22 15:00
+  text: '单小时+13.8%\n突破下降趋势线'
+  kind: logic
+- time: 2026-01-01 00:00
+  text: '2025年1月上线\nATH 5亿\n一年后跌95%至~5000万'
+  kind: logic
+
+zoom:
+# ===== Regime 1 放大 =====
+- time: 2025-12-20 00:00
+  text: '爆拉+11.0%/h\n技术突破启动'
+  kind: news
+- time: 2025-12-20 06:00
+  text: '+13.6%/h\n1h结算开始'
+  kind: news
+- time: 2025-12-22 15:00
+  text: '+13.8%/h\n成交量暴增'
+  kind: news
+- time: 2025-12-23 11:00
+  text: '连续+10%涨幅\nRSI 73.7超买'
+  kind: news
+
+# ===== Regime 2 放大 =====
+- time: 2026-03-17 00:00
+  text: 'Gate#0铸造日\n+14.3%/h\n交易所上线效应'
+  kind: news
+- time: 2026-03-17 02:00
+  text: '+8.6%/h\n铸造热潮持续'
+  kind: news

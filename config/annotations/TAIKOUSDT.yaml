@@ -1,0 +1,23 @@
+spot_note: '现货主战场: Upbit(TAIKO/KRW 24h约2.1亿, CoinGecko); 次: Bybit(1.06亿); 币安无现货; 用CoinGecko daily全市场量'
+
+panorama:
+- time: 2026-06-30 05:00
+  text: '10天前(6/22): SGX密钥泄露GitHub\n跨链桥170万被盗+金库被掏空\n→仅10天!桥修复+审计+全额赔付\n→4h→1h结算触发'
+  kind: news
+- time: 2026-07-02 00:00
+  text: '桥修复+新合约+5x杠杆\n爆拉+74.5%(0.075->0.13)\n盘中最高0.53\nVitalik背书ZK-EVM L2\n仍距ATH 3.06为-95.7%'
+  kind: news
+- time: 2026-07-03 00:00
+  text: '退出1h结算\n68点中85%负费率\n最深-2.00%'
+  kind: news
+- time: 2026-07-02 00:00
+  text: '结论: 危机恢复型反弹\n黑客→10天修好→市场奖励\n但流通仅19.5%(1.95亿/10亿)\n80%供应量未解锁是长期风险'
+  kind: logic
+
+zoom:
+- time: 2026-06-30 05:00
+  text: '1h结算开始\n桥恢复: 10天从被黑到重开'
+  kind: news
+- time: 2026-07-02 00:00
+  text: '+74.5% 爆拉\n桥修复+新合约+5x杠杆'
+  kind: news

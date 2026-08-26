@@ -6,8 +6,9 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 import yaml
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 from datetime import datetime, timezone
 from importlib import import_module
 
@@ -48,14 +49,19 @@ def run_with_cfg(cfg: dict, out_dir: str) -> list[str]:
 def _run_with_cfg(cfg: dict, out_dir: str) -> list[str]:
     ws, we = cfg["window"]["start"], cfg["window"]["end"]
     import datetime as _dt
-    window = (datetime.strptime(ws, "%Y-%m-%d").replace(tzinfo=timezone.utc),
-              datetime.strptime(we, "%Y-%m-%d").replace(tzinfo=timezone.utc) +
-              _dt.timedelta(days=1) - _dt.timedelta(seconds=1))
+    pre_days = cfg["window"].get("pre_lookback_days", 7)
+    lt_start_str = cfg["window"].get("lifetime_start", ws)
+    lt_start = datetime.strptime(lt_start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    # 采集窗口下界: 取 lifetime_start 和 (window.start - pre_days) 中更早的,
+    # 确保即使 regime 卡在数据边界, 也能看到 8h→1h 切换前的正常状态
+    candidate_start = (datetime.strptime(ws, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                       - _dt.timedelta(days=pre_days))
+    window_start = min(lt_start, candidate_start)
+    window_end = (datetime.strptime(we, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                  + _dt.timedelta(days=1) - _dt.timedelta(seconds=1))
+    window = (window_start, window_end)
     # lifetime 窗口(全程视图数据源用): 从 lifetime_start 到 end
-    lt_start = cfg["window"].get("lifetime_start", ws)
-    lifetime_window = (
-        datetime.strptime(lt_start, "%Y-%m-%d").replace(tzinfo=timezone.utc),
-        window[1])
+    lifetime_window = (lt_start, window[1])
     # 币种列表
     syms = cfg.get("symbols") or list_all_symbols()
     if not cfg.get("symbols"):
@@ -66,28 +72,44 @@ def _run_with_cfg(cfg: dict, out_dir: str) -> list[str]:
     print(f"已加载数据源: {list(sources.keys())}", file=sys.stderr)
 
     dataset = {"config": cfg, "matches": {}, "all_funding_without_regime": []}
-    for n, sym in enumerate(syms, 1):
+    lock = threading.Lock()
+    done_count = [0]  # mutable counter for thread-safe progress
+
+    def process_one(sym: str) -> tuple[str, list, dict] | None:
+        """处理单个币种, 返回 (sym, regimes, src_data) 或 None。"""
+        import time as _time
         try:
             src_data = {}
             for sn, src in sources.items():
                 win = lifetime_window if getattr(src, "lifetime", False) else window
                 src_data[sn] = src.fetch(sym, win[0], win[1])
-            # funding 是必需的（检测区间）
             if "funding" not in src_data or not src_data["funding"]:
-                continue
+                return None
             regimes = detect(src_data["funding"],
                              cfg["regime"]["one_hour"])
             if not regimes:
-                continue
-            print(f"  [{n}/{len(syms)}] MATCH {sym}: {len(regimes)} regime(s)",
-                  file=sys.stderr)
-            dataset["matches"][sym] = {
-                "regimes": regimes,
-                "raw": src_data,
-            }
+                return None
+            with lock:
+                done_count[0] += 1
+                print(f"  [{done_count[0]}/{len(syms)}] MATCH {sym}: {len(regimes)} regime(s)",
+                      file=sys.stderr)
+            return (sym, regimes, src_data)
         except Exception as e:
-            print(f"  [{n}/{len(syms)}] {sym} ERROR: {e}", file=sys.stderr)
-        time.sleep(0.05)
+            with lock:
+                done_count[0] += 1
+                print(f"  [{done_count[0]}/{len(syms)}] {sym} ERROR: {e}", file=sys.stderr)
+            return None
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        futures = {ex.submit(process_one, s): s for s in syms}
+        for fut in as_completed(futures):
+            result = fut.result()
+            if result:
+                sym, regimes, src_data = result
+                dataset["matches"][sym] = {
+                    "regimes": regimes,
+                    "raw": src_data,
+                }
 
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "dataset.json")

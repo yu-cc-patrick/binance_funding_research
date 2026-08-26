@@ -1,0 +1,19 @@
+panorama:
+- kind: news
+  text: 'R1/1 1h结算开始
+
+    33点, 91%负费率
+
+    费率极值: -0.17%'
+  time: 2026-03-22 09:00
+- kind: logic
+  text: '退出1h结算
+
+    持续32h'
+  time: 2026-03-23 17:00
+zoom:
+- kind: news
+  text: '1h结算
+
+    费率极值: -0.17%'
+  time: 2026-03-22 09:00

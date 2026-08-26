@@ -1,139 +1,231 @@
 # funding-event-chart
 
-币安永续「资金费率结算周期变 1h + 负费率」极端事件 —— 从 data.binance.vision 公开转储爬数据，到生成多维标注 K 线图的**完整制图流程**。
+币安永续「资金费率结算周期变 1h + 负费率」极端事件 —— 完整制图流程。支持**历史事件**（月度 dump 已发布）和**当下事件**（月度 dump 未发布，走 REST API）。
 
-**触发**：用户说"跑费率研究管线"、"研究费率极端事件"、"给 XXX 币出图"、"找费率变 1h 负费率的币"、"重新出图"等。
+**触发**："跑费率研究管线"、"给 XXX 币出图"、"找费率变 1h 负费率的币"、"重新出图"等。
 
 ---
 
-## ⚠️ 文字策略（最重要，2026-06 定版）
+## ⚠️ 第一步：判断老币还是新币
+
+| 判断 | 条件 | 数据源 | 示例 |
+|------|------|--------|------|
+| **老币** | 事件月份 ≤ 上个月（月度 dump 已发布）| `data.binance.vision` dump | RAVE (4月) |
+| **新币** | 事件发生在**当月**（月度 dump 未发布）| `fapi.binance.com` REST API | NFP (7/1) |
+
+**关键区别**：月度 dump 月底才发布，当月事件只能用 REST API。
+
+---
+
+## 文字策略
 
 **图上文字只保留客观事实，不做主观市场分析。**
 
-- ✅ **保留**：客观新闻/事件（如"Upbit 成交暴增"、"私钥泄露 1498万枚被劫持"、"美股休市"、"解锁"）、价格里程碑（"单日+33%"、"退出后14天-26%"）、爆拉点位标识。
-- ❌ **不做**：主观推断 FR/OI 的含义（如"空头在补贴多头"、"主力在派发"、"逼空概率 70%"这类）。
-- 之前花大量精力做的 `pipeline/structure.py` 市场结构评分引擎和右栏叙事 **默认关闭**（`config/research.yaml` → `plot.show_structure: false`）。代码保留但不出现在图上。
-
-爬取爆拉新闻时，用 WebSearch 查证催化剂（交易所上线、解锁、暴雷、休市），标注到 K 线爆拉点，**只陈述事件本身**，不要写"这意味着…"的分析。
-
----
-
-## 前置条件
-
-1. **网络**：`collect` 和 `plot` 都要联网拉 dump，且**必须关沙箱**（`dangerouslyDisableSandbox: true`）——本机沙箱代理把 >100B 响应体截为 0B，已验证。
-2. **数据源**：全部从 `data.binance.vision`（CDN，不受封锁）。实时 API `fapi.binance.com` 对本机出口 IP TLS 封锁，**不可用**。
-3. **Python**：`python3 + matplotlib + pyyaml`（report 才需 python-docx）。
-4. **中文字体**：`/System/Library/Fonts/Supplemental/Arial Unicode.ttf`，已在 plotting 顶部注册。
-5. **数据时效**：funding/kline 月度 dump 当月数据月底才发布；OI metrics 仅日度 dump 且只留近期（更早 404）。
+- ✅ 客观事件、价格里程碑、爆拉点位
+- ✅ 即使查不到催化剂，也必须写"无实质性利好支撑XX%涨幅"
+- ❌ 不做主观推断（"主力在派发"、"逼空概率70%"等）
+- 所有 WebSearch 数据必须附来源 URL
 
 ---
 
-## 工作流
+## 老币工作流（示例：RAVE, 2026年4月）
 
-项目根目录：`/Users/cr/binance_funding_research`。CLI：`python run.py {collect|metrics|plot|report|all}`。
-
-### 1. 配置 `config/research.yaml`
-
-```yaml
-window:
-  start: "2026-05-01"
-  end: "2026-06-18"           # 月 dump 发布后更新到当天
-  lifetime_start: "2025-11-01" # 周线全程视图起点(取合约上市月)
-  pre_lookback_days: 7
-  post_horizon_days: 20
-sources:
-  enabled: [funding, price, open_interest, daily, spot_volume]
-symbols: ["IDUSDT"]            # 留空=全市场扫描; 指定则只跑这些
-plot:
-  show_structure: false        # 保持 false(文字策略)
-  filename_prefix: "6.26_"     # 输出文件名日期前缀
+```
+① 配置 research.yaml → symbols, 窗口
+② python run.py collect (关沙箱, 16线程并行)
+③ python run.py metrics
+④ WebSearch 查催化剂 + 流通量 → 写 annotation YAML + 填 market_cap.circulating
+⑤ python run.py plot (关沙箱)
 ```
 
-### 2. 采集 `python run.py collect`（关沙箱）
+### 数据源（全部从 data.binance.vision dump）
 
-枚举币种 → 跑每个数据源 → 检测 1h+负费率区间 → `out/dataset.json`（唯一中间真相）。
-全量 11 币约几分钟（OI 是 5min 粒度，量大）。
+| 源 | 覆盖 | 备注 |
+|----|------|------|
+| funding | 月度 `fundingRate` | 完整历史 |
+| price | 月度+日度 `klines/1h` | 完整 |
+| open_interest | 日度 `metrics` | 5min 粒度，仅近期 |
+| daily | 月度+日度 `klines/1d` | 周线聚合 |
+| spot_volume | 币安现货月度+日度 `klines/1h` | 仅限有币安现货的币 |
+| coingecko_spot | CoinGecko `market_chart?days=365` | 币安无现货时的 fallback，daily 粒度 |
 
-### 3. 指标 `python run.py metrics`
+### 现货决策树
 
-从 dataset 算 → `out/metrics.json`：高低位判断（ATH/ATL/区间位置/近30日涨幅）、流通市值、OI 区间变化。
+```
+币安有现货？ → YES → 画 1h 柱，标"现货 币安"
+    ↓ NO
+CoinGecko tickers → 找最大现货主场
+    ↓
+找到？ → YES (如 KuCoin) → 能拉历史 K 线？ → 大概率不能（免费 API 只保留~7天）
+    ↓                                              → 文字标注 "主战场: KuCoin, 峰值XX"
+找不到单一主场 → "现货没有单一的主战场"
+```
 
-### 4. 制图 `python run.py plot`（关沙箱）
+### RAVE 完整示例
 
-从 `dataset.json` + `metrics.json` + `config/annotations/<SYM>.yaml` → `out/<prefix><SYM>.png` + `.svg`。
-SVG 文字是真实 text 元素、带 gid，可在 Inkscape 里改字、拖箭头。
+- **事件**：4/12~4/24 1h 结算，+4057% → -96%，纯庄币拉砸
+- **流通量**：2.52 亿（CMC），填 `market_cap.circulating.RAVEUSDT: 252480000`
+- **现货**：币安无 → CoinGecko tickers → KuCoin 最大（4/17上市日峰值 $2.5 亿）→ 历史 API 过期不
+可拉 → 用 CoinGecko daily 全市场量
+- **标注**：WebSearch → ZachXBT 曝光、内部控盘 90-95%、无实质性利好 → 写 RAVEUSDT.yaml
+- **spot_note**：`"现货主战场: KuCoin(4/17上市, 峰值24h约2.5亿, CMC); DEX仅8%; 币安无现货; 历史API过期不
+可拉"`
 
-### 爆拉新闻标注流程（每个币）
+---
 
-1. 看该币 regime 附近 1h K 线，找单小时涨幅 >8% 的爆拉点。
-2. `WebSearch` 查证催化剂（"XXX币 暴涨 日期 上线/解锁/新闻"）。
-3. 写 `config/annotations/<SYM>.yaml`，在爆拉点标 `kind: news` 框，**只写客观事件**。
-4. 出图，打开 SVG 核对箭头指向。
+## 新币工作流（示例：NFP, 2026年7/1）
 
-annotation YAML 结构：
+```
+① 判断为当月事件 → 用 fapi_rest 源
+② 走 fapi_rest 构建 dataset（脚本方式，不走 run.py collect）
+③ python run.py metrics（或用 from pipeline.metrics import run 直接调）
+④ WebSearch 查催化剂 + CoinGecko 查流通量 + CoinGecko tickers 找现货主场
+⑤ 写 annotation YAML（含 spot_note）
+⑥ python run.py plot
+```
+
+### 数据源（全部从币安 REST API）
+
+| 源 | REST API 端点 | Limit | 覆盖 |
+|----|--------------|-------|------|
+| funding | `fapi.binance.com/fapi/v1/fundingRate` | 1000 条 | ~42天 (4h结算) |
+| price | `fapi.binance.com/fapi/v1/klines?interval=1h` | 1500 根 | ~62天 |
+| open_interest | `fapi.binance.com/futures/data/openInterestHist?period=5m` | **500 条** | **仅 42 小时!** |
+| 多空比 | `fapi.binance.com/futures/data/globalLongShortAccountRatio?period=5m` | 500 条 | 42 小时 |
+| daily | `fapi.binance.com/fapi/v1/klines?interval=1d` | 500 根 | ~500天 |
+| spot_volume | `api.binance.com/api/v3/klines?interval=1h` | 1000 根 | 币安现货 |
+
+**⚠️ 关键局限**：OI 只有 42 小时——全景图 pre 区域无 OI 数据。等月度 dump 发布后才有完整历史。
+
+### 走 fapi_rest 构建 dataset 的标准脚本模板
+
+```python
+import json, os, sys
+from datetime import datetime, timezone
+os.chdir('/Users/cr/binance_funding_research')
+sys.path.insert(0, '.')
+
+from sources.fapi_rest import (FapiFundingSource, FapiPriceSource,
+    FapiDailySource, FapiOISource, FapiSpotSource)
+
+sym = "NFPUSDT"
+ws = datetime(2026, 7, 1, tzinfo=timezone.utc) - timedelta(days=7)  # pre 7d
+we = datetime(2026, 7, 2, tzinfo=timezone.utc)
+ls = datetime(2025, 12, 1, tzinfo=timezone.utc)  # lifetime start
+
+funding = FapiFundingSource().fetch(sym, ws, we)
+price   = FapiPriceSource().fetch(sym, ws, we)
+daily   = FapiDailySource().fetch(sym, ls, we)
+oi_data = FapiOISource().fetch(sym, ws, we)
+spot    = FapiSpotSource().fetch(sym, ws, we)
+
+from core.regimes import detect
+regimes = detect(funding, 1)
+
+cfg = {
+    'window': {'pre_lookback_days': 7, 'post_horizon_days': 5,
+               'lifetime_start': '2025-12-01', 'start': '2026-07-01', 'end': '2026-07-02'},
+    'plot': {'show_structure': False, 'filename_prefix': 'NFP_'},
+    'market_cap': {'circulating': {'NFPUSDT': 585640000}, 'default_circulating': None},
+    'regime': {'one_hour': 1, 'min_run': 3, 'gap_tolerance_min': 75},
+    'sampling': {'pre_interval_hours': 1, 'core_interval_hours': 1, 'post_interval_hours': 1}
+}
+
+dataset = {'config': cfg, 'matches': {sym: {
+    'regimes': regimes,
+    'raw': {'funding': funding, 'price': price, 'open_interest': oi_data,
+            'daily': daily, 'spot_volume': spot, 'coingecko_spot': []}
+}}}
+json.dump(dataset, open('out/_tmp.json','w'), indent=1, default=str)
+
+from pipeline.metrics import run as mr
+mr('out/_tmp.json', 'out')
+from pipeline.plotting import run as pr
+pr('out/_tmp.json', 'config/annotations', 'out', 'out/metrics.json',
+   {'filename_prefix': 'NFP_'})
+os.remove('out/_tmp.json')
+```
+
+### NFP 完整示例
+
+- **事件**：7/1 13:00 4h→1h 切换，12 个点全部负费率（最深 -1.94%）
+- **催化剂**：6/26 Binance TH 宣布下架 NFP → -24%；4/30 被标记"监控标签"；99.2% ATH 回撤
+- **流通量**：5.86 亿（CMC），OI 峰值 7.26 亿，**占流通 124%**（OI 超过流通量）
+- **现货**：CoinGecko tickers → 币安 NFP/USDT $52 亿 → 用 `api.binance.com` 拉 1h K 线
+- **spot_note**：`"现货主战场: 币安(NFP/USDT 24h约52亿, CoinGecko); 币安现货1h K线可用"`
+- **结论**："无实质性利好——Binance TH下架+监控标签→恐慌做空→1h负费率"
+
+---
+
+## 共同步骤（新老通用）
+
+### 流通市值
+
+1. WebSearch 或 CMC 查流通量
+2. 填入 `market_cap.circulating.<SYM>: <枚数>`
+3. metrics 自动计算：市值 ATH/当前、OI/流通占比
+
+### 标注 annotation YAML
+
 ```yaml
-panorama:                       # 全景图标注
-- time: 2026-05-30 03:00
-  text: 'Upbit成交暴增\n\n单日暴涨+33%'
-  kind: news                    # news=红框(客观事件) / logic=蓝框(价格里程碑)
-zoom:                           # 1h放大图标注
-- time: 2026-05-30 03:00
-  text: '爆拉+18.9%/h'
+spot_note: '现货主战场: XXX'
+
+panorama:
+- time: 2026-04-12 06:00
+  text: '+40.7%/h 史诗级爆拉\n74%仓位做空→逼空启动'
+  kind: news         # news=红圈 / logic=蓝圈
+
+zoom:
+- time: 2026-04-18 18:00
+  text: '-57.1%/h 史诗级踩踏'
   kind: news
 ```
 
+**图上只标字母**，底部面板集中列文字。有 `spot_note` 就用，没有则自动生成默认文本。
+
+### 制图
+
+`python run.py plot`（关沙箱）。所有 bar（OI、成交量、费率）**1h 粒度**，和 K 线一一对应。多 regime 自动分文件 `_r1`/`_r2`。SVG 可在 Inkscape 编辑。
+
 ---
 
-## 图表结构（7 行网格，每行左=全景 pre→1h→post，右=1h放大）
+## 图表结构（7 行网格 + 通栏 + 底部面板）
 
 | 行 | 内容 |
 |----|------|
-| 通栏 | 周线全程（上市→现在）+ 历史高低点 + 高点市值 + 高低位裁定 |
-| 1 | 价格 K 线 + 事件标注框（蓝=逻辑/红=新闻）|
-| 2 | 持仓量 OI（USDT 名义价值，绿增红减）|
-| 3 | 持仓量 OI（币本位，判断真实仓位变化的黄金标准）|
-| 4 | 成交量（合约左轴蓝柱 + 现货右轴橙柱）|
-| 5 | 大户多空比（折线，>1 净多）|
-| 6 | 资金费率（柱，负红正绿）|
-底部：策略点位评分表（如 annotation 里有 `strategy` 字段）。
+| 通栏 | 周线全程 + ATH/ATL + 市值 + OI/流通占比 + 高低位裁定 |
+| 1 | 价格 K 线 + 字母标记（红=news，蓝=logic）|
+| 2 | OI USDT 名义价值（柱，绿增红减，1h）|
+| 3 | OI 币本位（柱，1h）|
+| 4 | 成交量（合约左轴蓝 + 现货右轴橙，1h）|
+| 5 | 大户多空比（折线）|
+| 6 | 资金费率（柱，负红正绿，1h）|
+| 底部 | 标注文字段落 + spot_note |
 
 ---
 
-## 数据源清单（`sources/`，插件式）
+## 数据源对照
 
-| 源 | dump 路径 | 字段 | 备注 |
-|----|-----------|------|------|
-| funding | `monthly/fundingRate` | rate, interval | 检测区间用；只月度 |
-| price | `monthly+daily/klines/1h` | OHLC + v(成交额) | 合约 1h |
-| open_interest | `daily/metrics` | oi(币), oi_val(USDT), ls_ratio, top_ls_ratio | 5min；仅日度且只留近期 |
-| daily | `monthly+daily/klines/1d` | OHLC, v | lifetime 窗口；周线聚合用 |
-| spot_volume | `spot/monthly+daily/klines/1h` | vol(USDT), vol_coin | **现货 openTime 是微秒!** 要 //1000 |
-
-加新源：写 `sources/<name>.py` 继承 `DataSource` 实现 `fetch()` → 在 `research.yaml` 的 `sources.enabled` 加名字 → 如需新子图改 `pipeline/plotting.py`。
+| 数据 | 老币源 | 新币源 | 限制 |
+|------|--------|--------|------|
+| Funding | dump `monthly/fundingRate` | `fapi.binance.com/fundingRate` | REST limit 1000 |
+| 合约 1h K 线 | dump `klines/1h` | `fapi.binance.com/klines` | REST limit 1500 |
+| OI + 多空比 | dump `daily/metrics` | `futures/data/openInterestHist` | **REST 仅 42h!** |
+| 日线 | dump `klines/1d` | `fapi.binance.com/klines?interval=1d` | REST limit 500 |
+| 币安现货 | dump `spot/klines/1h` | `api.binance.com/klines` | REST limit 1000 |
+| 非币安现货 | CoinGecko `market_chart` daily | CoinGecko `tickers` + 个所 API | 历史过期 |
 
 ---
 
 ## 已知坑
 
-1. **沙箱截断**：collect/plot 必须 `dangerouslyDisableSandbox: true`。
-2. **regimes.detect 第二参**：是 `one_hour: int`，不是 dict。传错会 0 matches。
-3. **现货 K 线时间戳是微秒**（16 位），合约是毫秒（13 位），spot_volume 源要 `//1000`。
-4. **S3 枚举端点**：点写法 `s3.ap-northeast-1.amazonaws.com`，path-style。
-5. **AAPL/MSFT 无现货**（股票永续），spot_volume 返回空，正常。
-6. **机制三分类**：A 暴涨逼空 / B 暴雷砸盘 / C 股票休市折价。只有 C 是可重复的低风险做多机会；A/B 的负费率是行情过热/暴雷的伴生品，做多=接飞刀。
-
----
-
-## 模块结构速查
-
-```
-binance_funding_research/
-├── config/research.yaml          # 窗口/阈值/数据源/plot开关/币种
-├── config/annotations/<SYM>.yaml # 图上标注(用户可手编, 只客观事件)
-├── core/{http,dumps,timewin,regimes}.py  # 通用工具
-├── sources/{funding,price,open_interest,daily,spot_volume}.py
-├── pipeline/{collect,metrics,plotting,report,structure}.py
-│   └── structure.py 默认不启用(show_structure:false)
-├── out/                          # dataset.json/metrics.json/<prefix><SYM>.png+svg
-└── run.py                        # CLI: collect|metrics|plot|report|all
-```
+1. **沙箱截断**：collect/plot 必须 `dangerouslyDisableSandbox: true`
+2. **fapi.binance.com**：关沙箱后可用；`api.binance.com`（现货）同
+3. **CoinGecko `total_volumes` 永远是 24h 滚动量**——bucket 时用 max 不求和
+4. **新币 OI 只覆盖 42h**——全景图 pre 区域无 OI，等月度 dump 发布才完整
+5. **REST API funding 无 `interval` 字段**——从时间戳间隔推算
+6. **现货 K 线时间戳是微秒**（dump），合约是毫秒，spot_volume 源要 `//1000`
+7. **annotation 文本含 `$` 触发 LaTeX 数学模式** → 全部去掉
+8. **机制三分类**：A 暴涨逼空 / B 暴雷砸盘 / C 股票休市折价。A/B 做多=接飞刀
+9. **多 regime 文件覆盖**：文件名加 `_r1`/`_r2` 后缀
+10. **CoinGecko symbol 映射**：Binance symbol → CoinGecko id 需手动维护（`sources/coingecko_spot.py` 的 `SYM_TO_CG`）
