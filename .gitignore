@@ -6,8 +6,11 @@ __pycache__/
 out/*.png
 out/*.svg
 out/dataset.json
+out/dataset_temp*.json
 out/metrics.json
 out/*.docx
+
+# 精选示例图在 docs/figures/,单独提交
 
 # 系统
 .DS_Store
